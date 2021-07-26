@@ -17,23 +17,25 @@ import org.rain.server.data.DataMessageQueue;
 
 import java.util.Date;
 
+import static cn.hutool.core.lang.Console.log;
 
 @Slf4j
 public class ServerHandler extends ChannelInboundHandlerAdapter {
 
     private static ChannelGroup users = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     private ClientChannel clientChannel = new ClientChannel();
+    private DataMessageQueue dataMessageQueue = DataMessageQueue.getInstance();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         MessageBaseVO message = (MessageBaseVO) msg;
         Channel mychannel = ctx.channel();
-        log.info(new Date() + ": 服务端读到数据 -> " + message);
+        log(new Date() + ": 服务端读到数据 -> " + message);
         if (message.getMsgType() == 0){
             clientChannel.putChannel(message.getClientId(),mychannel);
             return;
         }
-        DataMessageQueue.add(message);
+        dataMessageQueue.add(message);
         if (message.getMsgType()==1){
             clientChannel.getManagers().forEach((key,value)-> users.writeAndFlush(message, channel -> channel != mychannel));
         }else if (message.getMsgType()==2&&clientChannel.containsKey(message.getGoalClient())){
@@ -53,7 +55,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
 
         String channelId = ctx.channel().id().asLongText();
-        log.info("客户端被移除，channelId为：" + channelId);
+        ServerHandler.log.info("客户端被移除，channelId为：" + channelId);
 
         // 当触发handlerRemoved，ChannelGroup会自动移除对应的客户端channel
         users.remove(ctx.channel());
@@ -62,20 +64,20 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception { // (5)
         Channel incoming = ctx.channel();
-        log.info("SimpleChatClient:"+incoming.remoteAddress()+"在线");
+        ServerHandler.log.info("SimpleChatClient:"+incoming.remoteAddress()+"在线");
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception { // (6)
         Channel incoming = ctx.channel();
-        log.info("SimpleChatClient:"+incoming.remoteAddress()+"掉线");
+        ServerHandler.log.info("SimpleChatClient:"+incoming.remoteAddress()+"掉线");
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         // 发生异常之后关键channel。随后从ChannelGroup 中移除
-        log.error(cause.getMessage());
+        ServerHandler.log.error(cause.getMessage());
         ctx.channel().close();
         users.remove(ctx.channel());
     }

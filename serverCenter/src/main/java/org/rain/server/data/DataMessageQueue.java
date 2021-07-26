@@ -11,57 +11,72 @@ import java.util.*;
  * @Date: 2021/7/23
  */
 public class DataMessageQueue  {
-    public static int dataCount = 100;
-    public static int showCount = 10;
 
-    private static final List<Object> dataQueue = new ArrayList<>(101);
-    private static int tail = 0;
-    private static int savePoint = 0;
+    private static DataMessageQueue instance = null;
 
+    private ServerConfig config = ServerConfig.getInstance();
+    private LocalStoreHandler localhandler = LocalStoreHandler.getInstance();
+
+    private  List<Object> dataQueue ;
+    private  int tail ;
+    private  int savePoint ;
+
+    public static DataMessageQueue getInstance() {
+        if (instance == null){
+            instance = new DataMessageQueue();
+            instance.dataQueue = new ArrayList<>(101);
+            instance.tail = 0;
+            instance.savePoint = 0;
+        }
+        return instance;
+    }
+
+    private DataMessageQueue(){ }
     /**
      * 仅在初始化时调用该方法，不考虑超容后落盘
      * @param c
      * @return
      */
-    public static void addAll(Collection<?> c) {
-        dataQueue.addAll(c);
-        for (int i = 0; i < dataCount +10; i++) {
-            dataQueue.add(new MessageBaseVO());
+    public void addAll(Collection<?> c) {
+        instance.dataQueue.addAll(c);
+        for (int i = 0; i < config.getDataQueueSize() +10; i++) {
+            instance.dataQueue.add(new MessageBaseVO());
         }
         //c的数据量小于等于showCount
-        savePoint = c.size();
-        tail = c.size();
+        instance.savePoint = c.size();
+        instance.tail = c.size();
     }
 
-    public static void add(Object o) {
+    public  void add(Object o) {
         /**
          * 1 初始化时，加载数据量小于或等于限定值，tail=head+1，不落盘
          */
-        if (tail == dataCount ){
-            LocalStoreHandler.saveDataToFile(dataQueue.subList(savePoint,dataCount));
-            savePoint = tail = 0;
+        if (instance.tail == config.getDataQueueSize() ){
+            localhandler.saveDataToFile(instance.dataQueue.subList(instance.savePoint,config.getDataQueueSize()));
+            instance.savePoint = tail = 0;
         }
-        dataQueue.set(tail++,o);
+        instance.dataQueue.set(instance.tail++,o);
     }
 
-    public static void scheduleSync(){
+    public void scheduleSync(){
         /**
          * 当定时同步任务发生时，存在三种情况
          */
-        LocalStoreHandler.saveDataToFile(dataQueue.subList(savePoint,tail));
-        savePoint = tail;
+        localhandler.saveDataToFile(instance.dataQueue.subList(instance.savePoint,instance.tail));
+        instance.savePoint = instance.tail;
     }
 
-    public static List<Object> showData(){
-        if (tail>showCount){
-            return dataQueue.subList(0,showCount);
+    public List<Object> showData(){
+        if (instance.tail>config.getClientShowSize()){
+            return instance.dataQueue.subList(0,config.getClientShowSize());
         }else {
-            return ListUtil.toList(dataQueue.subList(dataCount - (showCount-tail),dataCount),dataQueue.subList(0,tail));
+            return ListUtil.toList(instance.dataQueue.subList(config.getDataQueueSize() - (config.getClientShowSize()-instance.tail),
+                config.getDataQueueSize()),instance.dataQueue.subList(0,instance.tail));
         }
     }
 
-    public static int size() {
-        return dataQueue.size();
+    public int size() {
+        return instance.dataQueue.size();
     }
 
 //    public static void main(String[] args) {
