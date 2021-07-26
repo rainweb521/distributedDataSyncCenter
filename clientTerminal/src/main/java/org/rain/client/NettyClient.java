@@ -14,6 +14,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.rain.client.handler.NettyClientHandler;
 import org.rain.common.coder.Decoder;
 import org.rain.common.coder.Encoder;
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static cn.hutool.core.lang.Console.log;
 
+@Slf4j
 public class NettyClient {
 
     private static String host = "127.0.0.1";

@@ -10,20 +10,24 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import org.springframework.beans.factory.annotation.Value;
 import org.rain.common.coder.Decoder;
 import org.rain.common.coder.Encoder;
-import org.rain.server.handler.Init;
+import org.rain.server.handler.InitStartHandler;
 import org.rain.server.handler.ServerHandler;
 
 import javax.annotation.PreDestroy;
 
-public class NettyServer {
+public class Server {
+
+    @Value("${server.port:8070")
+    private Integer inetPort;
 
     private static NioEventLoopGroup bossGroup = new NioEventLoopGroup();
     private static NioEventLoopGroup workerGroup = new NioEventLoopGroup();
 
     public static void main(String[] args) {
-        Init.initialize();
+        InitStartHandler.initialize();
 
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap

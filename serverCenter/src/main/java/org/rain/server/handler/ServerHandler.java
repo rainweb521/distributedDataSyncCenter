@@ -10,33 +10,34 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import lombok.extern.slf4j.Slf4j;
 import org.rain.common.domain.vo.MessageBaseVO;
+import org.rain.server.data.ClientChannel;
 import org.rain.server.data.DataMessageQueue;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
-import static cn.hutool.core.lang.Console.log;
 
+@Slf4j
 public class ServerHandler extends ChannelInboundHandlerAdapter {
 
-    public static ChannelGroup users = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-    public Map<String,Channel> channelMap = new HashMap<>();
+    private static ChannelGroup users = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    private ClientChannel clientChannel = new ClientChannel();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         MessageBaseVO message = (MessageBaseVO) msg;
         Channel mychannel = ctx.channel();
-        log(new Date() + ": 服务端读到数据 -> " + message);
-        DataMessageQueue.add(message);
+        log.info(new Date() + ": 服务端读到数据 -> " + message);
         if (message.getMsgType() == 0){
-            channelMap.put(message.getClientId(),mychannel);
+            clientChannel.putChannel(message.getClientId(),mychannel);
+            return;
         }
+        DataMessageQueue.add(message);
         if (message.getMsgType()==1){
-            channelMap.forEach((key,value)-> users.writeAndFlush(message, channel -> channel != mychannel));
-        }else if (message.getMsgType()==2&&channelMap.containsKey(message.getGoalClient())){
-            channelMap.get(message.getGoalClient()).writeAndFlush(message);
+            clientChannel.getManagers().forEach((key,value)-> users.writeAndFlush(message, channel -> channel != mychannel));
+        }else if (message.getMsgType()==2&&clientChannel.containsKey(message.getGoalClient())){
+            clientChannel.getChannel(message.getGoalClient()).writeAndFlush(message);
         }
 
     }
@@ -52,7 +53,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
 
         String channelId = ctx.channel().id().asLongText();
-        System.out.println("客户端被移除，channelId为：" + channelId);
+        log.info("客户端被移除，channelId为：" + channelId);
 
         // 当触发handlerRemoved，ChannelGroup会自动移除对应的客户端channel
         users.remove(ctx.channel());
@@ -61,19 +62,20 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception { // (5)
         Channel incoming = ctx.channel();
-        System.out.println("SimpleChatClient:"+incoming.remoteAddress()+"在线");
+        log.info("SimpleChatClient:"+incoming.remoteAddress()+"在线");
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception { // (6)
         Channel incoming = ctx.channel();
-        System.out.println("SimpleChatClient:"+incoming.remoteAddress()+"掉线");
+        log.info("SimpleChatClient:"+incoming.remoteAddress()+"掉线");
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         // 发生异常之后关键channel。随后从ChannelGroup 中移除
+        log.error(cause.getMessage());
         ctx.channel().close();
         users.remove(ctx.channel());
     }

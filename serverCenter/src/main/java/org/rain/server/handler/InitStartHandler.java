@@ -8,15 +8,12 @@ import java.util.concurrent.*;
  * @Author: wcy
  * @Date: 2021/7/23
  */
-public class Init {
+public class InitStartHandler {
     public static void initialize(){
         ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-        executorService.schedule(() -> {
-            DataMessageQueue.scheduleSync();
-            return "call";
-        }, 120, TimeUnit.SECONDS);
-
-        FileHandler.init();
+        executorService.scheduleAtFixedRate(DataMessageQueue::scheduleSync,
+            5, 120,TimeUnit.SECONDS);
+        LocalStoreHandler.init();
     }
 
 }

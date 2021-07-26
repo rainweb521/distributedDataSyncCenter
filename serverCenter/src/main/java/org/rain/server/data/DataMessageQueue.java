@@ -2,7 +2,7 @@ package org.rain.server.data;
 
 import cn.hutool.core.collection.ListUtil;
 import org.rain.common.domain.vo.MessageBaseVO;
-import org.rain.server.handler.FileHandler;
+import org.rain.server.handler.LocalStoreHandler;
 
 import java.util.*;
 
@@ -38,7 +38,7 @@ public class DataMessageQueue  {
          * 1 初始化时，加载数据量小于或等于限定值，tail=head+1，不落盘
          */
         if (tail == dataCount ){
-            FileHandler.saveDataToFile(dataQueue.subList(savePoint,dataCount));
+            LocalStoreHandler.saveDataToFile(dataQueue.subList(savePoint,dataCount));
             savePoint = tail = 0;
         }
         dataQueue.set(tail++,o);
@@ -48,7 +48,7 @@ public class DataMessageQueue  {
         /**
          * 当定时同步任务发生时，存在三种情况
          */
-        FileHandler.saveDataToFile(dataQueue.subList(savePoint,tail));
+        LocalStoreHandler.saveDataToFile(dataQueue.subList(savePoint,tail));
         savePoint = tail;
     }
 
